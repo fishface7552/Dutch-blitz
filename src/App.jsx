@@ -381,7 +381,7 @@ function PlayTab({ profiles, onGameEnd, C, inp, scoringMethod, saveScoringMethod
     </>}
     <div style={{background:C.surface,borderRadius:14,padding:"14px",marginBottom:20,border:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:12}}>
       <span style={{fontSize:13,color:C.sub,fontWeight:600}}>Target score</span>
-      <input type="tel" value={target} onChange={e=>setTarget(parseInt(e.target.value)||75)} min={10} max={999} style={{...inp,width:80,textAlign:"center"}}/>
+      <input type="number" inputMode="numeric" value={target} onChange={e=>setTarget(parseInt(e.target.value)||75)} min={10} max={999} style={{...inp,width:80,textAlign:"center"}}/>
       <span style={{fontSize:13,color:C.muted}}>points</span>
     </div>
    <div style={{background:C.surface,borderRadius:14,padding:"14px",marginBottom:20,border:`1px solid ${C.border}`}}>
@@ -442,10 +442,10 @@ function PlayTab({ profiles, onGameEnd, C, inp, scoringMethod, saveScoringMethod
         return <div key={p.id} style={{display:"grid",gridTemplateColumns:gameMethod==="manual"?"1fr 1fr 44px 38px":"1fr 1fr 1fr 44px 38px",gap:6,alignItems:"center",marginBottom:8}}>
           <div style={{fontSize:13,color:p.color,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
           {gameMethod==="manual" ? (
-          <input type="tel" min={0} value={entries[i]?.cp||""} onChange={e=>upd(i,"cp",e.target.value)} placeholder="0" style={{...inp,textAlign:"center",padding:"6px 4px"}}/>
+          <input type="number" inputMode="numeric" min={0} value={entries[i]?.cp||""} onChange={e=>upd(i,"cp",e.target.value)} placeholder="0" style={{...inp,textAlign:"center",padding:"6px 4px"}}/>
           ) : (<>
-         <input type="tel" min={0} max={40} value={entries[i]?.cp||""} onChange={e=>upd(i,"cp",e.target.value)} placeholder="0" style={{...inp,textAlign:"center",padding:"6px 4px"}}/>
-         <input type="tel" min={0} max={10} value={entries[i]?.ch||""} onChange={e=>upd(i,"ch",e.target.value)} placeholder="0" style={{...inp,textAlign:"center",padding:"6px 4px"}}/>
+         <input type="number" inputMode="numeric" min={0} max={40} value={entries[i]?.cp||""} onChange={e=>upd(i,"cp",e.target.value)} placeholder="0" style={{...inp,textAlign:"center",padding:"6px 4px"}}/>
+         <input type="number" inputMode="numeric" min={0} max={10} value={entries[i]?.ch||""} onChange={e=>upd(i,"ch",e.target.value)} placeholder="0" style={{...inp,textAlign:"center",padding:"6px 4px"}}/>
          </>)}
           <div style={{textAlign:"center",fontSize:14,fontWeight:800,color:!has?C.muted:pts>=0?"#43D9A3":"#FF6B6B"}}>{!has?"—":(pts>=0?"+":"")+pts}</div>
           <div style={{display:"flex",justifyContent:"center"}}>
