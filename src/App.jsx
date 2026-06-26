@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 const STORAGE_PROFILES = "db_profiles";
 const STORAGE_HISTORY  = "db_history";
 const STORAGE_SETTINGS = "db_settings";
+const STORAGE_SCORING_METHOD = "db_scoring_method";
 
 if (!document.getElementById("db-global-styles")) {
   const s = document.createElement("style");
@@ -84,6 +85,7 @@ export default function App() {
   const [settings, setSettings] = useState({ theme:"dark" });
   const [loaded, setLoaded] = useState(false);
   const [confirmDeletePlayer, setConfirmDeletePlayer] = useState(null);
+  const [scoringMethod, setScoringMethod] = useState("cards");
 
   useEffect(() => {
     (async () => {
@@ -93,6 +95,8 @@ export default function App() {
       if (p) setProfiles(p);
       if (h) setHistory(h);
       if (s) setSettings(s);
+      const sm = await ls(STORAGE_SCORING_METHOD);
+if (sm) setScoringMethod(sm);
       setLoaded(true);
     })();
   }, []);
@@ -100,6 +104,7 @@ export default function App() {
   async function saveProfiles(p) { setProfiles(p); await ss(STORAGE_PROFILES, p); }
   async function saveHistory(h) { setHistory(h); await ss(STORAGE_HISTORY, h); }
   async function saveSettings(s) { setSettings(s); await ss(STORAGE_SETTINGS, s); }
+  async function saveScoringMethod(m) { setScoringMethod(m); await ss(STORAGE_SCORING_METHOD, m); }
 
   async function onGameEnd(game) {
     const newHistory = [game, ...history];
@@ -145,7 +150,7 @@ export default function App() {
 
       {/* Content */}
       <div style={{padding:"14px 16px",flex:1,overflowY:"auto"}}>
-        <div style={{display:tab==="play"?"block":"none"}}><PlayTab profiles={profiles} onGameEnd={onGameEnd} C={C} inp={inp}/></div>
+        <div style={{display:tab==="play"?"block":"none"}}><PlayTab profiles={profiles} onGameEnd={onGameEnd} C={C} inp={inp} scoringMethod={scoringMethod} saveScoringMethod={saveScoringMethod}/></div>
         <div style={{display:tab==="history"?"block":"none"}}><HistoryTab history={history} profiles={profiles} C={C} saveHistory={saveHistory}/></div>
         <div style={{display:tab==="players"?"block":"none"}}><PlayersTab profiles={profiles} saveProfiles={saveProfiles} C={C} inp={inp} onDeletePlayer={setConfirmDeletePlayer}/></div>
         <div style={{display:tab==="settings"?"block":"none"}}><SettingsTab settings={settings} saveSettings={saveSettings} C={C} profiles={profiles} onDeletePlayer={setConfirmDeletePlayer}/></div>
@@ -221,7 +226,7 @@ function SettingsTab({ settings, saveSettings, C, profiles, onDeletePlayer }) {
 }
 
 /* ── Play ─────────────────────────────────────────────────── */
-function PlayTab({ profiles, onGameEnd, C, inp }) {
+function PlayTab({ profiles, onGameEnd, C, inp, scoringMethod, saveScoringMethod }) {
   const [phase, setPhase] = useState("setup");
   const [selectedPlayers, setSelectedPlayers] = useState([]);
   const [target, setTarget] = useState(75);
@@ -232,6 +237,7 @@ function PlayTab({ profiles, onGameEnd, C, inp }) {
   const [entries, setEntries] = useState([]);
   const [editingRound, setEditingRound] = useState(null);
   const [guestName, setGuestName] = useState("");
+  const [gameMethod, setGameMethod] = useState(scoringMethod);
   const blitzCount = entries.filter(e=>e?.blitz).length;
   const canSaveRound = blitzCount === 1;
 
@@ -250,10 +256,11 @@ function PlayTab({ profiles, onGameEnd, C, inp }) {
     setRoundHistory([]); setGameOver(false); setWinner(null); setEditingRound(null);
     setEntries(selectedPlayers.map(()=>({cp:"0",ch:"0",blitz:false})));
     setPhase("game");
+    setGameMethod(scoringMethod);
   }
   function clampInput(value, max) {
     if (value==="") return "";
-    const n = Math.max(0, Math.min(max, parseInt(value)||0));
+    const n = Math.max(-20, Math.min(max, parseInt(value)||0));
     return String(n);
   }
   function normalizeBlitz(nextEntries) {
@@ -279,7 +286,10 @@ function PlayTab({ profiles, onGameEnd, C, inp }) {
     }
     setEntries(e);
   }
-  function calcPts(i){return (parseInt(entries[i]?.cp)||0)-((parseInt(entries[i]?.ch)||0)*2);}
+  function calcPts(i){
+  if (gameMethod==="manual") return parseInt(entries[i]?.cp)||0;
+  return (parseInt(entries[i]?.cp)||0)-((parseInt(entries[i]?.ch)||0)*2);
+ }
   function totalScores(history) {
     return selectedPlayers.map((_,i)=>history.reduce((sum,r)=>sum+(r.scores[i]||0),0));
   }
@@ -334,7 +344,7 @@ function PlayTab({ profiles, onGameEnd, C, inp }) {
     setWinner(finalWinner);
     onGameEnd({id:genId(),date:new Date().toISOString(),target,
       players:selectedPlayers.map((p,i)=>({...p,finalScore:scores[i],blitzes:roundHistory.reduce((sum,r)=>sum+(r.blitzers[i]||0),0)})),
-      roundLog:roundHistory,winnerId:selectedPlayers[finalWinner].profileId,winnerName:selectedPlayers[finalWinner].name,rounds:roundHistory.length});
+      roundLog:roundHistory,winnerId:selectedPlayers[finalWinner].profileId,winnerName:selectedPlayers[finalWinner].name,rounds:roundHistory.length, scoringMethod:gameMethod});
   }
   function undoRound() {
     if (!roundHistory.length) return;
@@ -371,9 +381,19 @@ function PlayTab({ profiles, onGameEnd, C, inp }) {
     </>}
     <div style={{background:C.surface,borderRadius:14,padding:"14px",marginBottom:20,border:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:12}}>
       <span style={{fontSize:13,color:C.sub,fontWeight:600}}>Target score</span>
-      <input type="number" value={target} onChange={e=>setTarget(parseInt(e.target.value)||75)} min={10} max={999} style={{...inp,width:80,textAlign:"center"}}/>
+      <input type="tel" value={target} onChange={e=>setTarget(parseInt(e.target.value)||75)} min={10} max={999} style={{...inp,width:80,textAlign:"center"}}/>
       <span style={{fontSize:13,color:C.muted}}>points</span>
     </div>
+   <div style={{background:C.surface,borderRadius:14,padding:"14px",marginBottom:20,border:`1px solid ${C.border}`}}>
+  <p style={{fontSize:12,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:1.2,marginBottom:10}}>Scoring Method</p>
+  <div style={{display:"flex",gap:8}}>
+    {[["cards","Cards (Default)"],["manual","Manual Points"]].map(([val,label])=>(
+      <button key={val} onClick={()=>saveScoringMethod(val)} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${scoringMethod===val?C.accent:C.border}`,background:scoringMethod===val?C.accentBg:"transparent",color:scoringMethod===val?C.accent:C.sub,fontSize:13,cursor:"pointer",fontWeight:scoringMethod===val?700:400}}>
+        {label}
+      </button>
+    ))}
+  </div>
+</div>
     <button onClick={startGame} disabled={selectedPlayers.length<2} style={{width:"100%",padding:"13px",borderRadius:12,background:selectedPlayers.length>=2?`linear-gradient(135deg,${C.accent},#54C8FF)`:C.surfaceAlt,color:selectedPlayers.length>=2?"#fff":C.muted,border:"none",fontSize:15,cursor:selectedPlayers.length>=2?"pointer":"not-allowed",fontWeight:700}}>
       {selectedPlayers.length>=2?`Start game · ${selectedPlayers.length} players`:"Select at least 2 players"}
     </button>
@@ -413,16 +433,20 @@ function PlayTab({ profiles, onGameEnd, C, inp }) {
 
     {!gameOver&&<div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:"1rem",marginBottom:12}}>
       <p style={{fontSize:14,fontWeight:700,color:C.text,marginBottom:12,margin:"0 0 12px"}}>{editingRound!==null?`Edit round ${editingRound+1}`:`Round ${roundHistory.length+1}`}</p>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 44px 38px",gap:6,marginBottom:8}}>
-        {["","Played","In hand","Pts","⚡"].map((l,i)=><div key={i} style={{fontSize:10,color:C.muted,textAlign:i>0?"center":"left",fontWeight:600,textTransform:"uppercase",letterSpacing:0.5}}>{l}</div>)}
+      <div style={{display:"grid",gridTemplateColumns:gameMethod==="manual"?"1fr 1fr 44px 38px":"1fr 1fr 1fr 44px 38px",gap:6,marginBottom:8}}>
+        {(gameMethod==="manual"?["","Points Earned","Pts","⚡"]:["","Played","In hand","Pts","⚡"]).map((l,i)=><div key={i} style={{fontSize:10,color:C.muted,textAlign:i>0?"center":"left",fontWeight:600,textTransform:"uppercase",letterSpacing:0.5}}>{l}</div>)}
       </div>
       {selectedPlayers.map((p,i)=>{
         const pts=calcPts(i);
         const has=(entries[i]?.cp||"")!==""||( entries[i]?.ch||"")!=="";
-        return <div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 44px 38px",gap:6,alignItems:"center",marginBottom:8}}>
+        return <div key={p.id} style={{display:"grid",gridTemplateColumns:gameMethod==="manual"?"1fr 1fr 44px 38px":"1fr 1fr 1fr 44px 38px",gap:6,alignItems:"center",marginBottom:8}}>
           <div style={{fontSize:13,color:p.color,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
-          <input type="number" min={0} max={40} value={entries[i]?.cp||""} onChange={e=>upd(i,"cp",e.target.value)} placeholder="0" style={{...inp,textAlign:"center",padding:"6px 4px"}}/>
-          <input type="number" min={0} max={10} value={entries[i]?.ch||""} onChange={e=>upd(i,"ch",e.target.value)} placeholder="0" style={{...inp,textAlign:"center",padding:"6px 4px"}}/>
+          {gameMethod==="manual" ? (
+          <input type="tel" min={0} value={entries[i]?.cp||""} onChange={e=>upd(i,"cp",e.target.value)} placeholder="0" style={{...inp,textAlign:"center",padding:"6px 4px"}}/>
+          ) : (<>
+         <input type="tel" min={0} max={40} value={entries[i]?.cp||""} onChange={e=>upd(i,"cp",e.target.value)} placeholder="0" style={{...inp,textAlign:"center",padding:"6px 4px"}}/>
+         <input type="tel" min={0} max={10} value={entries[i]?.ch||""} onChange={e=>upd(i,"ch",e.target.value)} placeholder="0" style={{...inp,textAlign:"center",padding:"6px 4px"}}/>
+         </>)}
           <div style={{textAlign:"center",fontSize:14,fontWeight:800,color:!has?C.muted:pts>=0?"#43D9A3":"#FF6B6B"}}>{!has?"—":(pts>=0?"+":"")+pts}</div>
           <div style={{display:"flex",justifyContent:"center"}}>
             <button onClick={()=>upd(i,"blitz",!entries[i]?.blitz)} style={{width:32,height:32,borderRadius:8,border:`1.5px solid ${entries[i]?.blitz?"#FF9F43":C.border}`,background:entries[i]?.blitz?"#FF9F4333":"transparent",cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center"}}>⚡</button>
