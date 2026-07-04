@@ -17,6 +17,16 @@ if (!document.getElementById("db-global-styles")) {
   document.head.appendChild(s);
 }
 
+function updateThemeColor(color) {
+  let tag = document.querySelector('meta[name="theme-color"]:not([media])');
+  if (!tag) {
+    tag = document.createElement("meta");
+    tag.name = "theme-color";
+    document.head.appendChild(tag);
+  }
+  tag.content = color;
+}
+
 function genId() { return Math.random().toString(36).slice(2, 9); }
 
 const COLORS = ["#54A0FF","#FF6584","#43D9A3","#FF9F43","#6C63FF","#FF6B6B","#A29BFE","#00D2D3","#FD79A8","#55EFC4"];
@@ -65,7 +75,7 @@ function RoundLogTable({ rounds, players, scores, C, onEditRound }) {
         </div>)}
         {onEditRound&&<div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"4px"}}>
           <button onClick={()=>onEditRound(roundIndex)} style={{width:34,height:28,borderRadius:8,border:`1px solid ${C.border}`,background:"transparent",color:C.sub,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <i className="ti ti-edit" style={{fontSize:14}}></i>
+            <i className="ti ti-pencil" style={{fontSize:14}}></i>
           </button>
         </div>}
       </div>
@@ -118,6 +128,7 @@ if (sm) setScoringMethod(sm);
   }
 
   const C = settings.theme === "dark" ? DARK : LIGHT;
+  useEffect(() => { updateThemeColor(C.bg); }, [C.bg]);
   const inp = { background:C.surfaceAlt, border:`1px solid ${C.border}`, color:C.text, borderRadius:10, padding:"8px 10px", fontSize:14, outline:"none", width:"100%" };
 
   if (!loaded) return <div style={{padding:"2rem",color:C.sub,fontSize:14,background:C.bg,minHeight:"100dvh"}}>Loading...</div>;
@@ -200,7 +211,7 @@ function SettingsTab({ settings, saveSettings, C, profiles, onDeletePlayer }) {
                 <div style={{fontSize:11,color:C.muted}}>{p.gamesPlayed||0} games · {p.wins||0} wins</div>
               </div>
             </div>
-            <button onClick={() => onDeletePlayer(p)} style={{background:"none",border:`1px solid #FF6B6B66`,borderRadius:8,cursor:"pointer",color:"#FF6B6B",padding:"6px 9px",display:"flex",alignItems:"center"}}>
+            <button onClick={() => onDeletePlayer(p)} style={{background:"none",border:`1px solid #c83f3f66`,borderRadius:8,cursor:"pointer",color:"#FF6B6B",padding:"6px 9px",display:"flex",alignItems:"center"}}>
               <i className="ti ti-trash" style={{fontSize:15}}></i>
             </button>
           </div>
@@ -434,7 +445,7 @@ function PlayTab({ profiles, onGameEnd, C, inp, scoringMethod, saveScoringMethod
     {!gameOver&&<div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:"1rem",marginBottom:12}}>
       <p style={{fontSize:14,fontWeight:700,color:C.text,marginBottom:12,margin:"0 0 12px"}}>{editingRound!==null?`Edit round ${editingRound+1}`:`Round ${roundHistory.length+1}`}</p>
       <div style={{display:"grid",gridTemplateColumns:gameMethod==="manual"?"1fr 1fr 44px 38px":"1fr 1fr 1fr 44px 38px",gap:6,marginBottom:8}}>
-        {(gameMethod==="manual"?["","Points Earned","Pts","⚡"]:["","Played","In hand","Pts","⚡"]).map((l,i)=><div key={i} style={{fontSize:10,color:C.muted,textAlign:i>0?"center":"left",fontWeight:600,textTransform:"uppercase",letterSpacing:0.5}}>{l}</div>)}
+        {(gameMethod==="manual"?["","Points Earned","Pts","⚡"]:["","In hand","Played","Pts","⚡"]).map((l,i)=><div key={i} style={{fontSize:10,color:C.muted,textAlign:i>0?"center":"left",fontWeight:600,textTransform:"uppercase",letterSpacing:0.5}}>{l}</div>)}
       </div>
       {selectedPlayers.map((p,i)=>{
         const pts=calcPts(i);
@@ -444,8 +455,9 @@ function PlayTab({ profiles, onGameEnd, C, inp, scoringMethod, saveScoringMethod
           {gameMethod==="manual" ? (
           <input type="number" inputMode="numeric" min={0} value={entries[i]?.cp||""} onChange={e=>upd(i,"cp",e.target.value)} placeholder="0" style={{...inp,textAlign:"center",padding:"6px 4px"}}/>
           ) : (<>
-         <input type="number" inputMode="numeric" min={0} max={40} value={entries[i]?.cp||""} onChange={e=>upd(i,"cp",e.target.value)} placeholder="0" style={{...inp,textAlign:"center",padding:"6px 4px"}}/>
          <input type="number" inputMode="numeric" min={0} max={10} value={entries[i]?.ch||""} onChange={e=>upd(i,"ch",e.target.value)} placeholder="0" style={{...inp,textAlign:"center",padding:"6px 4px"}}/>
+         <input type="number" inputMode="numeric" min={0} max={40} value={entries[i]?.cp||""} onChange={e=>upd(i,"cp",e.target.value)} placeholder="0" style={{...inp,textAlign:"center",padding:"6px 4px"}}/>
+         
          </>)}
           <div style={{textAlign:"center",fontSize:14,fontWeight:800,color:!has?C.muted:pts>=0?"#43D9A3":"#FF6B6B"}}>{!has?"—":(pts>=0?"+":"")+pts}</div>
           <div style={{display:"flex",justifyContent:"center"}}>
@@ -585,7 +597,6 @@ function PlayersTab({ profiles, saveProfiles, C, inp, onDeletePlayer }) {
           </div>
           <div style={{display:"flex",gap:4}}>
             <button onClick={()=>setEditId(p.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.sub,padding:"5px",borderRadius:8,display:"flex"}}><i className="ti ti-edit" style={{fontSize:16}}></i></button>
-            <button onClick={()=>onDeletePlayer(p)} style={{background:"none",border:"none",cursor:"pointer",color:"#FF6B6B",padding:"5px",borderRadius:8,display:"flex"}}><i className="ti ti-trash" style={{fontSize:16}}></i></button>
           </div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6,marginBottom:6}}>
